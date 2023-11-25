@@ -150,6 +150,12 @@ func postIconHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to insert new user icon: "+err.Error())
 	}
 
+	iconHash := sha256.Sum256(req.Image)
+	_, err = tx.ExecContext(ctx, "UPDATE users SET icon_hash = ? WHERE id = ?", fmt.Sprintf("%x", iconHash), userID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to update icon hash: "+err.Error())
+	}
+
 	iconID, err := rs.LastInsertId()
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get last inserted icon id: "+err.Error())
@@ -405,17 +411,21 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 		return User{}, err
 	}
 
-	var image []byte
-	if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userModel.ID); err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			return User{}, err
+	iconHash := userModel.IconHash
+	if iconHash == nil {
+		var image []byte
+		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userModel.ID); err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				return User{}, err
+			}
+			image, err = os.ReadFile(fallbackImage)
+			if err != nil {
+				return User{}, err
+			}
 		}
-		image, err = os.ReadFile(fallbackImage)
-		if err != nil {
-			return User{}, err
-		}
+		iconHashStr := fmt.Sprintf("%x", sha256.Sum256(image))
+		iconHash = &iconHashStr
 	}
-	iconHash := sha256.Sum256(image)
 
 	user := User{
 		ID:          userModel.ID,
@@ -426,7 +436,7 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 			ID:       themeModel.ID,
 			DarkMode: themeModel.DarkMode,
 		},
-		IconHash: fmt.Sprintf("%x", iconHash),
+		IconHash: *iconHash,
 	}
 
 	return user, nil
