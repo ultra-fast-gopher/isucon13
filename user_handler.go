@@ -420,7 +420,7 @@ func getUserResponse(ctx context.Context, tx *sqlx.Tx, id int64) (User, error) {
 	fetched, found := userCache.Load(id)
 
 	now := time.Now()
-	if found && fetched.fetchedAt.Add(1*time.Second+300*time.Millisecond).Before(now) {
+	if found && fetched.fetchedAt.Add(1*time.Second+300*time.Millisecond).After(now) {
 		return fetched.user, nil
 	}
 
