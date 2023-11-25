@@ -1,3 +1,5 @@
+ALTER TABLE users ADD icon_hash varchar(255);
+
 -- NOTE: パスワードは `test`
 INSERT INTO users (id, name, display_name, description, password) VALUES (1, 'test001', '検証用ユーザ', '社内検証用', '$2a$04$LBt4Dc0Uu3HE0c.8KVMtbOnXwd4PHCboGxa2I57RmJFQVba/B0U8a');
 INSERT INTO themes (user_id, dark_mode) VALUES (1, true);
@@ -1999,4 +2001,3 @@ INSERT INTO users (id, name, display_name, description, password) VALUES (999, '
 INSERT INTO themes (user_id, dark_mode) VALUES (999, false);
 INSERT INTO users (id, name, display_name, description, password) VALUES (1000, 'tomoya450', 'おまんまる', '普段脚本家をしています。\nよろしくおねがいします！\n\n連絡は以下からお願いします。\n\nウェブサイト: http://tomoya45.example.com/\nメールアドレス: tomoya45@example.com\n', '$2a$04$/v16fIbxYBiHvtEmtjgydeJ/fUI2H0OhCgNdTReh5WZUtHYvubDDi');
 INSERT INTO themes (user_id, dark_mode) VALUES (1000, false);
-
