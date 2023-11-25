@@ -28,7 +28,7 @@ func bcryptCompairHandler(c echo.Context) error {
 		return err
 	}
 
-	equal, found := cache.Load(req.HashedPassword + ":" + req.Password)
+	equal, found := cache.Load(req.HashedPassword + "-" + req.Password)
 
 	if found {
 		if equal {
