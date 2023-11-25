@@ -35,6 +35,7 @@ var (
 	powerDNSSubdomainAddress string
 	dbConn                   *sqlx.DB
 	secret                   = []byte("isucon13_session_cookiestore_defaultsecret")
+	bcryptAPI                = fmt.Sprintf("http://192.168.0.13:%d/api/bcrypt", listenPort)
 )
 
 func init() {
@@ -209,6 +210,10 @@ func main() {
 
 	// 課金情報
 	e.GET("/api/payment", GetPaymentResult)
+
+	// bcrypt計算
+	e.POST("/api/bcrypt/compair", bcryptCompairHandler)
+	e.POST("/api/bcrypt/sum", bcryptSumHandler)
 
 	e.HTTPErrorHandler = errorResponseHandler
 

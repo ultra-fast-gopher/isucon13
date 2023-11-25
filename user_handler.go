@@ -1,22 +1,25 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -90,14 +93,14 @@ func getIconHandler(c echo.Context) error {
 
 	username := c.Param("username")
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	}
-	defer tx.Rollback()
+	// tx, err := dbConn.BeginTxx(ctx, nil)
+	// if err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	// }
+	// defer tx.Rollback()
 
 	var user UserModel
-	if err := tx.GetContext(ctx, &user, "SELECT * FROM users WHERE name = ?", username); err != nil {
+	if err := dbConn.GetContext(ctx, &user, "SELECT * FROM users WHERE name = ?", username); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
 		}
@@ -228,9 +231,34 @@ func registerHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "the username 'pipe' is reserved")
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcryptDefaultCost)
+	// BcryptをAPIに投げる
+	api := fmt.Sprintf("%s/sum", bcryptAPI)
+	breq := PostBcryptSumHandler{
+		Password: req.Password,
+	}
+	breqJson, err := json.Marshal(breq)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to generate hashed password: "+err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to marshal json: "+err.Error())
+	}
+
+	// apiに投げる
+	bres, err := http.Post(api, "application/json", bytes.NewBuffer(breqJson))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to post to bcrypt api: "+err.Error())
+	}
+	bresBody, err := io.ReadAll(bres.Body)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to read response body: "+err.Error())
+	}
+
+	if bres.StatusCode != http.StatusOK {
+		bResStr := string(bresBody)
+		return echo.NewHTTPError(bres.StatusCode, bResStr)
+	}
+
+	var bresJson PostBcryptSumResult
+	if err := json.Unmarshal(bresBody, &bresJson); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to unmarshal json: "+err.Error())
 	}
 
 	tx, err := dbConn.BeginTxx(ctx, nil)
@@ -243,7 +271,7 @@ func registerHandler(c echo.Context) error {
 		Name:           req.Name,
 		DisplayName:    req.DisplayName,
 		Description:    req.Description,
-		HashedPassword: string(hashedPassword),
+		HashedPassword: bresJson.HashedPassword,
 	}
 
 	result, err := tx.NamedExecContext(ctx, "INSERT INTO users (name, display_name, description, password) VALUES(:name, :display_name, :description, :password)", userModel)
@@ -314,12 +342,30 @@ func loginHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(userModel.HashedPassword), []byte(req.Password))
-	if err == bcrypt.ErrMismatchedHashAndPassword {
-		return echo.NewHTTPError(http.StatusUnauthorized, "invalid username or password")
+	// BcryptをAPIに投げる
+	api := fmt.Sprintf("%s/compair", bcryptAPI)
+	breq := PostBcryptCompairHandler{
+		Password:       req.Password,
+		HashedPassword: userModel.HashedPassword,
 	}
+	breqJson, err := json.Marshal(breq)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to compare hash and password: "+err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to marshal json: "+err.Error())
+	}
+
+	// apiに投げる
+	bres, err := http.Post(api, "application/json", bytes.NewBuffer(breqJson))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to post to bcrypt api: "+err.Error())
+	}
+	bresBody, err := io.ReadAll(bres.Body)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to read response body: "+err.Error())
+	}
+
+	if bres.StatusCode != http.StatusOK {
+		bResStr := string(bresBody)
+		return echo.NewHTTPError(bres.StatusCode, bResStr)
 	}
 
 	sessionEndAt := time.Now().Add(1 * time.Hour)
