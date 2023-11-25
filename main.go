@@ -101,8 +101,8 @@ func connectDB(logger echo.Logger) (*sqlx.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(30)
-	db.SetMaxIdleConns(30)
+	db.SetMaxOpenConns(50)
+	db.SetMaxIdleConns(50)
 
 	if err := db.Ping(); err != nil {
 		return nil, err
@@ -117,6 +117,7 @@ func initializeHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
 	}
 	userCache = Map[int64, cachedUser]{}
+	livestreamTagsCache = Map[int64, []int64]{}
 	initDNSRecordMap()
 
 	go http.Get("http://ufgportal:9000/api/group/collect")
