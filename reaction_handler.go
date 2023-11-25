@@ -66,9 +66,14 @@ func getReactionsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "failed to get reactions")
 	}
 
+	livestreamModel := LivestreamModel{}
+	if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livestreamID); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
+	}
+
 	reactions := make([]Reaction, len(reactionModels))
 	for i := range reactionModels {
-		reaction, err := fillReactionResponse(ctx, tx, reactionModels[i])
+		reaction, err := fillReactionResponse(ctx, tx, reactionModels[i], &livestreamModel)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill reaction: "+err.Error())
 		}
@@ -129,7 +134,7 @@ func postReactionHandler(c echo.Context) error {
 	}
 	reactionModel.ID = reactionID
 
-	reaction, err := fillReactionResponse(ctx, tx, reactionModel)
+	reaction, err := fillReactionResponse(ctx, tx, reactionModel, nil)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill reaction: "+err.Error())
 	}
@@ -141,16 +146,21 @@ func postReactionHandler(c echo.Context) error {
 	return c.JSON(http.StatusCreated, reaction)
 }
 
-func fillReactionResponse(ctx context.Context, tx *sqlx.Tx, reactionModel ReactionModel) (Reaction, error) {
+func fillReactionResponse(ctx context.Context, tx *sqlx.Tx, reactionModel ReactionModel, cachedLivestreamModel *LivestreamModel) (Reaction, error) {
 	user, err := getUserResponse(ctx, tx, reactionModel.UserID)
 	if err != nil {
 		return Reaction{}, err
 	}
 
 	livestreamModel := LivestreamModel{}
-	if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", reactionModel.LivestreamID); err != nil {
-		return Reaction{}, err
+	if cachedLivestreamModel != nil {
+		livestreamModel = *cachedLivestreamModel
+	} else {
+		if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", reactionModel.LivestreamID); err != nil {
+			return Reaction{}, err
+		}
 	}
+
 	livestream, err := fillLivestreamResponse(ctx, tx, livestreamModel)
 	if err != nil {
 		return Reaction{}, err
