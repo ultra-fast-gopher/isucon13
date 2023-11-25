@@ -118,6 +118,9 @@ func initializeHandler(c echo.Context) error {
 	}
 	initDNSRecordMap()
 
+	os.RemoveAll(iconDir)
+	os.MkdirAll(iconDir, 0755)
+
 	go http.Get("http://ufgportal:9000/api/group/collect")
 
 	c.Request().Header.Add("Content-Type", "application/json;charset=utf-8")
