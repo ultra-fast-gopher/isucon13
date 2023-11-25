@@ -227,11 +227,6 @@ func getLivestreamStatisticsHandler(c echo.Context) error {
 		}
 	}
 
-	var livestreams []*LivestreamModel
-	if err := tx.SelectContext(ctx, &livestreams, "SELECT * FROM livestreams"); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
-	}
-
 	rows, err := tx.Query(`SELECT l.id, COUNT(r.livestream_id) as reaction_count FROM livestreams l INNER JOIN reactions r ON l.id = r.livestream_id GROUP BY l.id`)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to count reactions: "+err.Error())
