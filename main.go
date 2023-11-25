@@ -26,6 +26,7 @@ import (
 const (
 	listenPort                     = 8080
 	powerDNSSubdomainAddressEnvKey = "ISUCON13_POWERDNS_SUBDOMAIN_ADDRESS"
+	iconDir                        = "/home/isucon/webapp/go/icon"
 )
 
 var (
@@ -101,8 +102,8 @@ func connectDB(logger echo.Logger) (*sqlx.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(30)
-	db.SetMaxIdleConns(30)
+	db.SetMaxOpenConns(50)
+	db.SetMaxIdleConns(50)
 
 	if err := db.Ping(); err != nil {
 		return nil, err
@@ -118,6 +119,9 @@ func initializeHandler(c echo.Context) error {
 	}
 	userCache = Map[int64, cachedUser]{}
 	initDNSRecordMap()
+
+	os.RemoveAll(iconDir)
+	os.MkdirAll(iconDir, 0755)
 
 	go http.Get("http://ufgportal:9000/api/group/collect")
 
