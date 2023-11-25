@@ -1,3 +1,5 @@
+ALTER TABLE `isupipe`.`reactions` ADD INDEX `reactions_livestream_id` (`livestream_id`);
+
 INSERT INTO reactions (emoji_name, user_id, livestream_id, created_at)
 VALUES
 	('table_tennis_paddle_and_ball', 855, 5849, UNIX_TIMESTAMP()),
