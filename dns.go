@@ -1,6 +1,161 @@
 package main
 
-import "sync"
+import (
+	"encoding/json"
+	"log"
+	"net"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/miekg/dns"
+)
+
+var lock sync.RWMutex
+var dnsRecordMap Map[string, struct{}]
+
+func initDNSRecordMap() {
+	lock.Lock()
+	defer lock.Unlock()
+	dnsRecordMap = Map[string, struct{}]{}
+
+	for key := range dnsRecords {
+		dnsRecordMap.Store(key, struct{}{})
+	}
+}
+
+var publicIP = os.Getenv("ISUCON13_POWERDNS_SUBDOMAIN_ADDRESS")
+var publicIPBytes = net.ParseIP(publicIP)
+
+func loadDNSRecord() {
+	var records []string
+	fp, err := os.Open("records.txt")
+
+	if err != nil {
+		initDNSRecordMap()
+		log.Println(err)
+
+		return
+	}
+	defer fp.Close()
+
+	json.NewDecoder(fp).Decode(&records)
+
+	for _, record := range records {
+		dnsRecordMap.Store(record, struct{}{})
+	}
+
+	if len(records) == 0 {
+		initDNSRecordMap()
+	}
+}
+
+func saveDNSRecord() {
+	var records []string
+	lock.RLock()
+	dnsRecordMap.Range(func(key string, value struct{}) bool {
+		records = append(records, key)
+		return true
+	})
+	lock.RUnlock()
+
+	fp, err := os.Create("records-tmp.txt")
+
+	if err != nil {
+		log.Println(err)
+
+		return
+	}
+
+	if err := json.NewEncoder(fp).Encode(&records); err != nil {
+		fp.Close()
+		log.Println(err)
+		return
+	}
+	fp.Close()
+
+	os.Rename("records-tmp.txt", "records.txt")
+}
+
+func parseQuery(m *dns.Msg) bool {
+	ok := false
+	for _, q := range m.Question {
+		rrHeader := dns.RR_Header{Name: q.Name, Rrtype: q.Qtype, Class: q.Qclass, Ttl: 60}
+
+		switch q.Qtype {
+		case dns.TypeNS:
+			if q.Name == "u.isucon.dev." {
+				m.Answer = append(m.Answer, &dns.NS{
+					Hdr: rrHeader,
+					Ns:  "ns1.u.isucon.dev.",
+				})
+				ok = true
+			}
+		case dns.TypeA:
+			rec := strings.TrimSuffix(q.Name, "u.isucon.dev.")
+			rec = strings.TrimSuffix(rec, ".")
+
+			lock.RLock()
+			_, found := dnsRecordMap.Load(rec)
+			lock.RUnlock()
+
+			if !found {
+				continue
+			}
+
+			m.Answer = append(m.Answer, &dns.A{
+				Hdr: rrHeader,
+				A:   publicIPBytes,
+			})
+			ok = true
+		}
+	}
+
+	return ok
+}
+
+func init() {
+	loadDNSRecord()
+
+	fn := dns.HandlerFunc(func(w dns.ResponseWriter, r *dns.Msg) {
+		m := new(dns.Msg)
+		m.SetReply(r)
+		m.Compress = false
+
+		if r.Opcode != dns.OpcodeQuery {
+			return
+		}
+
+		ok := parseQuery(m)
+
+		if !ok {
+			// 存在しないレコードの場合は何も返さない
+			return
+		}
+
+		w.WriteMsg(m)
+	})
+
+	go func() {
+		for range time.Tick(5 * time.Second) {
+			saveDNSRecord()
+		}
+	}()
+
+	// start server
+	go func() {
+		port := 53
+		server := &dns.Server{Addr: ":" + strconv.Itoa(port), Net: "udp", Handler: fn}
+		log.Printf("Starting at %d\n", port)
+		err := server.ListenAndServe()
+		defer server.Shutdown()
+		if err != nil {
+			log.Fatalf("Failed to start server: %s\n ", err.Error())
+		}
+	}()
+}
 
 var dnsRecords = map[string]struct{}{
 	"":                   {},
