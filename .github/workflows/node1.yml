@@ -1,0 +1,22 @@
+name: node1
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: [self-hosted, linux, x64, node1]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: |
+          export PATH=/home/isucon/local/go/bin:/home/isucon/go/bin:/usr/local/go/bin:/home/isucon/.local/go/bin:/home/isucon/local/golang/bin:$PATH
+          export HASH="${GITHUB_SHA:0:7}"
+          make build
+          sudo mv isupipe /home/isucon/webapp/go
+          sudo systemctl restart isupipe-go.service
+      - name: Notify on Discord
+        run: |
+          curl -H "Content-Type: application/json" -X POST -d '{"username": "ultra-fast-gopher", "content": "Deploy for ${{ github.sha }} finished on node1"}' \
+            https://discord.com/api/webhooks/1177183532934762516/g10vdfurOrkD-DrzVIuAmo-sdDRfXW3vy1r73XGySxuFLPjk5Io1ZEhA0C1_EZAyeXnU
