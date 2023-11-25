@@ -507,7 +507,7 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 		}),
 	)
 
-	var tags []Tag
+	tags := make([]Tag, 0)
 	if len(tagIds) != 0 {
 		// INでtagsを持ってくる
 		query, params, err := sqlx.In("SELECT * FROM tags WHERE id IN (?)", tagIds)
