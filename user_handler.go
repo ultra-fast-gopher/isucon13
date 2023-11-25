@@ -219,6 +219,8 @@ func getMeHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
+var bcryptMap Map[string, string]
+
 // ユーザ登録API
 // POST /api/register
 func registerHandler(c echo.Context) error {
@@ -234,9 +236,17 @@ func registerHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "the username 'pipe' is reserved")
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcryptDefaultCost)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to generate hashed password: "+err.Error())
+	var hashedPassword string
+	if cachedHashedPassword, b := bcryptMap.Load(req.Password); b {
+		hashedPassword = string(cachedHashedPassword)
+	} else {
+		calcHashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcryptDefaultCost)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to generate hashed password: "+err.Error())
+		}
+
+		hashedPassword = string(calcHashedPassword)
+		bcryptMap.Store(req.Password, hashedPassword)
 	}
 
 	tx, err := dbConn.BeginTxx(ctx, nil)
@@ -320,12 +330,18 @@ func loginHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(userModel.HashedPassword), []byte(req.Password))
-	if err == bcrypt.ErrMismatchedHashAndPassword {
-		return echo.NewHTTPError(http.StatusUnauthorized, "invalid username or password")
-	}
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to compare hash and password: "+err.Error())
+	if cachedHashedPassword, b := bcryptMap.Load(req.Password); b {
+		if cachedHashedPassword != userModel.HashedPassword {
+			return echo.NewHTTPError(http.StatusUnauthorized, "invalid username or password")
+		}
+	} else {
+		err = bcrypt.CompareHashAndPassword([]byte(userModel.HashedPassword), []byte(req.Password))
+		if err == bcrypt.ErrMismatchedHashAndPassword {
+			return echo.NewHTTPError(http.StatusUnauthorized, "invalid username or password")
+		}
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to compare hash and password: "+err.Error())
+		}
 	}
 
 	sessionEndAt := time.Now().Add(1 * time.Hour)

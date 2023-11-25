@@ -118,6 +118,8 @@ func initializeHandler(c echo.Context) error {
 	}
 	initDNSRecordMap()
 
+	bcryptMap = Map[string, string]{}
+
 	os.RemoveAll(iconDir)
 	os.MkdirAll(iconDir, 0755)
 
