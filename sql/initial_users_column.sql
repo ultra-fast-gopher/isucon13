@@ -1,1 +1,1 @@
-ALTER TABLE users ADD COLUMN IF NOT EXISTS icon_hash varchar(255);
+ALTER TABLE users ADD icon_hash varchar(255);
