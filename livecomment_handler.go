@@ -102,13 +102,16 @@ func parseQuery(m *dns.Msg) bool {
 				ok = true
 			}
 		case dns.TypeA:
+			log.Println(q.Name)
 			rec := strings.TrimSuffix(q.Name, "u.isucon.dev.")
 			rec = strings.TrimSuffix(rec, ".")
+			log.Println(rec)
 
 			lock.RLock()
 			_, found := dnsRecordMap.Load(rec)
 			lock.RUnlock()
 
+			log.Println(found)
 			if !found {
 				continue
 			}
