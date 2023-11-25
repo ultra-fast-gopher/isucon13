@@ -76,7 +76,9 @@ func saveDNSRecord() {
 	}
 	fp.Close()
 
-	os.Rename("records-tmp.txt", "records.txt")
+	if err := os.Rename("records-tmp.txt", "records.txt"); err != nil {
+		panic(err)
+	}
 }
 
 func parseQuery(m *dns.Msg) bool {
