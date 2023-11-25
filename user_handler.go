@@ -480,12 +480,22 @@ func getUserResponse(ctx context.Context, tx *sqlx.Tx, id int64, name *string) (
 	}
 
 	model := UserModel{}
-	if err := tx.GetContext(ctx, &model, "SELECT * FROM users WHERE id = ?", id); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return User{}, sql.ErrNoRows
-		}
+	if name != nil {
+		if err := tx.GetContext(ctx, &model, "SELECT * FROM users WHERE name = ?", name); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return User{}, sql.ErrNoRows
+			}
 
-		return User{}, err
+			return User{}, err
+		}
+	} else {
+		if err := tx.GetContext(ctx, &model, "SELECT * FROM users WHERE id = ?", id); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return User{}, sql.ErrNoRows
+			}
+
+			return User{}, err
+		}
 	}
 
 	user, err := fillUserResponse(ctx, tx, model)
