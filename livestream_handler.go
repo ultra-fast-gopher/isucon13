@@ -185,10 +185,12 @@ func searchLivestreamsHandler(c echo.Context) error {
 	var livestreamModels []*LivestreamModel
 	if c.QueryParam("tag") != "" {
 		// タグによる取得
-		var tagIDList []int
-		if err := tx.SelectContext(ctx, &tagIDList, "SELECT id FROM tags WHERE name = ?", keyTagName); err != nil {
+		tagID, found := tagNameToID[keyTagName]
+
+		if !found {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get tags: "+err.Error())
 		}
+		var tagIDList = []int{tagID}
 
 		query, params, err := sqlx.In("SELECT * FROM livestream_tags WHERE tag_id IN (?) ORDER BY livestream_id DESC", tagIDList)
 		if err != nil {
@@ -486,54 +488,39 @@ func getLivecommentReportsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, reports)
 }
 
+var livestreamTagsCache Map[int64, []int64]
+
 func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel LivestreamModel) (Livestream, error) {
 	owner, err := getUserResponse(ctx, tx, livestreamModel.UserID)
 	if err != nil {
 		return Livestream{}, err
 	}
 
-	var livestreamTagModels []*LivestreamTagModel
-	if err := tx.SelectContext(ctx, &livestreamTagModels, "SELECT * FROM livestream_tags WHERE livestream_id = ?", livestreamModel.ID); err != nil {
-		return Livestream{}, err
-	}
+	// タグのキャッシュがあればそれを使う
+	tagIds, found := livestreamTagsCache.Load(livestreamModel.ID)
 
-	// タグのID集合
-	tagIds := lo.Uniq(
-		lo.Map(livestreamTagModels, func(ltm *LivestreamTagModel, _ int) int64 {
-			return ltm.TagID
-		}),
-	)
+	if !found {
+		var livestreamTagModels []*LivestreamTagModel
+		if err := tx.SelectContext(ctx, &livestreamTagModels, "SELECT * FROM livestream_tags WHERE livestream_id = ?", livestreamModel.ID); err != nil {
+			return Livestream{}, err
+		}
+
+		tagIds = lo.Uniq(
+			lo.Map(livestreamTagModels, func(ltm *LivestreamTagModel, _ int) int64 {
+				return ltm.TagID
+			}),
+		)
+
+		livestreamTagsCache.Store(livestreamModel.ID, tagIds)
+	}
 
 	tags := make([]Tag, 0)
-	if len(tagIds) != 0 {
-		// INでtagsを持ってくる
-		query, params, err := sqlx.In("SELECT * FROM tags WHERE id IN (?)", tagIds)
-		if err != nil {
-			return Livestream{}, err
-		}
-		var tagModels []*TagModel
-		if err := tx.SelectContext(ctx, &tagModels, query, params...); err != nil {
-			return Livestream{}, err
-		}
-		tags = lo.Map(tagModels, func(tm *TagModel, _ int) Tag {
-			return Tag{
-				ID:   tm.ID,
-				Name: tm.Name,
-			}
+	for _, tagId := range tagIds {
+		tags = append(tags, Tag{
+			ID:   tagId,
+			Name: globalTags[tagId],
 		})
 	}
-
-	//for i := range livestreamTagModels {
-	//	tagModel := TagModel{}
-	//	if err := tx.GetContext(ctx, &tagModel, "SELECT * FROM tags WHERE id = ?", livestreamTagModels[i].TagID); err != nil {
-	//		return Livestream{}, err
-	//	}
-	//
-	//	tags[i] = Tag{
-	//		ID:   tagModel.ID,
-	//		Name: tagModel.Name,
-	//	}
-	//}
 
 	livestream := Livestream{
 		ID:           livestreamModel.ID,
