@@ -102,8 +102,8 @@ func connectDB(logger echo.Logger) (*sqlx.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(50)
-	db.SetMaxIdleConns(50)
+	db.SetMaxOpenConns(30)
+	db.SetMaxIdleConns(30)
 
 	if err := db.Ping(); err != nil {
 		return nil, err
@@ -117,6 +117,7 @@ func initializeHandler(c echo.Context) error {
 		c.Logger().Warnf("init.sh failed with err=%s", string(out))
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
 	}
+	userCache = Map[int64, cachedUser]{}
 	initDNSRecordMap()
 
 	os.RemoveAll(iconDir)
