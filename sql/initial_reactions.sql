@@ -1,4 +1,4 @@
-ALTER TABLE `isupipe`.`reactions` ADD INDEX `reactions_livestream_id` (`livestream_id`);
+CREATE INDEX IF NOT EXISTS reactions_livestream_id ON reactions (livestream_id);
 
 INSERT INTO reactions (emoji_name, user_id, livestream_id, created_at)
 VALUES
