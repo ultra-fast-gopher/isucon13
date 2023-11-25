@@ -31,12 +31,12 @@ const (
 var fallbackImage = "../img/NoImage.jpg"
 
 type UserModel struct {
-	ID             int64  `db:"id"`
-	Name           string `db:"name"`
-	DisplayName    string `db:"display_name"`
-	Description    string `db:"description"`
-	HashedPassword string `db:"password"`
-	IconHash       string `db:"icon_hash"`
+	ID             int64   `db:"id"`
+	Name           string  `db:"name"`
+	DisplayName    string  `db:"display_name"`
+	Description    string  `db:"description"`
+	HashedPassword string  `db:"password"`
+	IconHash       *string `db:"icon_hash"`
 }
 
 type User struct {
