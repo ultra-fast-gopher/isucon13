@@ -12,6 +12,8 @@ import (
 	"os/exec"
 	"strconv"
 
+	"github.com/goccy/go-json"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/kaz/pprotein/integration/standalone"
@@ -132,15 +134,26 @@ func initializeHandler(c echo.Context) error {
 	})
 }
 
+type JSONSerializer struct{}
+
+func (j *JSONSerializer) Serialize(c echo.Context, i interface{}, _ string) error {
+	return json.NewEncoder(c.Response()).Encode(i)
+}
+
+func (j *JSONSerializer) Deserialize(c echo.Context, i interface{}) error {
+	return json.NewDecoder(c.Request().Body).Decode(i)
+}
+
 func main() {
 	e := echo.New()
-	e.Debug = true
+	e.Debug = false
 	e.Logger.SetLevel(echolog.DEBUG)
 	e.Use(middleware.Logger())
 	cookieStore := sessions.NewCookieStore(secret)
 	cookieStore.Options.Domain = "*.u.isucon.dev"
 	e.Use(session.Middleware(cookieStore))
 	// e.Use(middleware.Recover())
+	e.JSONSerializer = &JSONSerializer{}
 
 	// 初期化
 	e.POST("/api/initialize", initializeHandler)
