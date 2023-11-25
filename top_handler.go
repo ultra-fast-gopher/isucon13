@@ -26,7 +26,7 @@ func getTagHandler(c echo.Context) error {
 	tags := make([]*Tag, 0, len(globalTags)-1)
 	for id, tag := range globalTags[1:] {
 		tagModel := Tag{
-			ID:   int64(id),
+			ID:   int64(id) + 1,
 			Name: tag,
 		}
 
