@@ -115,6 +115,7 @@ func initializeHandler(c echo.Context) error {
 		c.Logger().Warnf("init.sh failed with err=%s", string(out))
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
 	}
+	initDNSRecordMap()
 
 	go http.Get("http://ufgportal:9000/api/group/collect")
 
