@@ -507,21 +507,24 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 		}),
 	)
 
-	// INでtagsを持ってくる
-	query, params, err := sqlx.In("SELECT * FROM tags WHERE id IN (?)", tagIds)
-	if err != nil {
-		return Livestream{}, err
-	}
-	var tagModels []*TagModel
-	if err := tx.SelectContext(ctx, &tagModels, query, params...); err != nil {
-		return Livestream{}, err
-	}
-	tags := lo.Map(tagModels, func(tm *TagModel, _ int) Tag {
-		return Tag{
-			ID:   tm.ID,
-			Name: tm.Name,
+	var tags []Tag
+	if len(tagIds) != 0 {
+		// INでtagsを持ってくる
+		query, params, err := sqlx.In("SELECT * FROM tags WHERE id IN (?)", tagIds)
+		if err != nil {
+			return Livestream{}, err
 		}
-	})
+		var tagModels []*TagModel
+		if err := tx.SelectContext(ctx, &tagModels, query, params...); err != nil {
+			return Livestream{}, err
+		}
+		tags = lo.Map(tagModels, func(tm *TagModel, _ int) Tag {
+			return Tag{
+				ID:   tm.ID,
+				Name: tm.Name,
+			}
+		})
+	}
 
 	//for i := range livestreamTagModels {
 	//	tagModel := TagModel{}
