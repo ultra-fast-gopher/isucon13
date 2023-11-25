@@ -227,7 +227,7 @@ func postLivecommentHandler(c echo.Context) error {
 	//	}
 	//}
 	var hitSpam int
-	query := `SELECT COUNT(*) FROM ng_words WHERE user_id = ? AND livestream_id = ? AND LIKE CONCAT('%', '?', '%');`
+	query := `SELECT COUNT(*) FROM ng_words WHERE user_id = ? AND livestream_id = ? AND LIKE word CONCAT('%', ?, '%');`
 	if err := tx.GetContext(ctx, &hitSpam, query, livestreamModel.UserID, livestreamModel.ID, req.Comment); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get hitspam: "+err.Error())
 	}
