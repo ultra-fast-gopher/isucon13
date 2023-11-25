@@ -26,6 +26,7 @@ import (
 const (
 	listenPort                     = 8080
 	powerDNSSubdomainAddressEnvKey = "ISUCON13_POWERDNS_SUBDOMAIN_ADDRESS"
+	iconDir                        = "/home/isucon/webapp/go/icon"
 )
 
 var (
@@ -116,6 +117,9 @@ func initializeHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
 	}
 	initDNSRecordMap()
+
+	os.RemoveAll(iconDir)
+	os.MkdirAll(iconDir, 0755)
 
 	go http.Get("http://ufgportal:9000/api/group/collect")
 
