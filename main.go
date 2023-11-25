@@ -122,6 +122,7 @@ func initializeHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
 	}
 	userCache = Map[int64, cachedUser]{}
+	userNameCache = Map[string, cachedUser]{}
 	livestreamTagsCache = Map[int64, []int64]{}
 	livestreamCache = Map[int64, LivestreamModel]{}
 	initDNSRecordMap()
