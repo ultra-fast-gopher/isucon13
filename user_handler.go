@@ -105,6 +105,11 @@ func getIconHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
 	}
 
+	headerIconHash := c.Request().Header.Get("If-None-Match")
+	if user.IconHash != nil && *user.IconHash == headerIconHash {
+		return c.NoContent(http.StatusNotModified)
+	}
+
 	var image []byte
 	if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", user.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
