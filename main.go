@@ -101,7 +101,8 @@ func connectDB(logger echo.Logger) (*sqlx.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(10)
+	db.SetMaxOpenConns(30)
+	db.SetMaxIdleConns(30)
 
 	if err := db.Ping(); err != nil {
 		return nil, err
@@ -115,6 +116,7 @@ func initializeHandler(c echo.Context) error {
 		c.Logger().Warnf("init.sh failed with err=%s", string(out))
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to initialize: "+err.Error())
 	}
+	userCache = Map[int64, cachedUser]{}
 	initDNSRecordMap()
 
 	go http.Get("http://ufgportal:9000/api/group/collect")

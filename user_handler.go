@@ -193,16 +193,10 @@ func getMeHandler(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	userModel := UserModel{}
-	err = tx.GetContext(ctx, &userModel, "SELECT * FROM users WHERE id = ?", userID)
+	user, err := getUserResponse(ctx, tx, userID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusNotFound, "not found user that has the userid in session")
 	}
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
-	}
-
-	user, err := fillUserResponse(ctx, tx, userModel)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill user: "+err.Error())
 	}
@@ -367,14 +361,14 @@ func getUserHandler(c echo.Context) error {
 	defer tx.Rollback()
 
 	userModel := UserModel{}
-	if err := tx.GetContext(ctx, &userModel, "SELECT * FROM users WHERE name = ?", username); err != nil {
+	if err := tx.GetContext(ctx, &userModel, "SELECT id FROM users WHERE name = ?", username); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
 		}
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
 	}
 
-	user, err := fillUserResponse(ctx, tx, userModel)
+	user, err := getUserResponse(ctx, tx, userModel.ID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill user: "+err.Error())
 	}
@@ -408,6 +402,43 @@ func verifyUserSession(c echo.Context) error {
 	}
 
 	return nil
+}
+
+type cachedUser struct {
+	user      User
+	fetchedAt time.Time
+}
+
+var userCache Map[int64, cachedUser]
+
+func getUserResponse(ctx context.Context, tx *sqlx.Tx, id int64) (User, error) {
+	fetched, found := userCache.Load(id)
+
+	now := time.Now()
+	if found && fetched.fetchedAt.Add(1*time.Second+300*time.Millisecond).Before(now) {
+		return fetched.user, nil
+	}
+
+	model := UserModel{}
+	if err := tx.GetContext(ctx, &model, "SELECT * FROM users WHERE id = ?", id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return User{}, sql.ErrNoRows
+		}
+
+		return User{}, err
+	}
+
+	user, err := fillUserResponse(ctx, tx, model)
+
+	if err != nil {
+		return User{}, err
+	}
+
+	fetched.fetchedAt = now
+	fetched.user = user
+	userCache.Store(id, fetched)
+
+	return user, nil
 }
 
 func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (User, error) {
