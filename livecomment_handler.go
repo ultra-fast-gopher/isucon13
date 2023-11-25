@@ -132,6 +132,7 @@ func loadDNSRecord() {
 	fp, err := os.Open("records.txt")
 
 	if err != nil {
+		initDNSRecordMap()
 		log.Println(err)
 
 		return
@@ -142,6 +143,10 @@ func loadDNSRecord() {
 
 	for _, record := range records {
 		dnsRecordMap.Store(record, struct{}{})
+	}
+
+	if len(records) == 0 {
+		initDNSRecordMap()
 	}
 }
 
