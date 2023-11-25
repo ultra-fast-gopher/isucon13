@@ -105,11 +105,7 @@ func getIconHandler(c echo.Context) error {
 	}
 
 	headerIconHash := c.Request().Header.Get("If-None-Match")
-	if user.IconHash != nil {
-		c.Logger().Infof("getIconHandler: %+v, user.IconHash: %+v", headerIconHash, *user.IconHash)
-	}
-
-	if user.IconHash != nil && *user.IconHash == headerIconHash {
+	if user.IconHash != nil && fmt.Sprintf(`"%s"`, *user.IconHash) == headerIconHash {
 		return c.NoContent(http.StatusNotModified)
 	}
 
