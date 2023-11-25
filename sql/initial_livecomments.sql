@@ -1,4 +1,4 @@
-ALTER TABLE `isupipe`.`livecomments` ADD INDEX `livecomments_livestream_id` (`livestream_id`);
+CREATE INDEX IF NOT EXISTS `livecomments_livestream_id` ON `livecomments` (`livestream_id`);
 
 INSERT INTO livecomments (user_id, livestream_id, comment, created_at)
 VALUES
