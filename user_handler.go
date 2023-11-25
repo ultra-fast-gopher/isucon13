@@ -99,21 +99,21 @@ func getIconHandler(c echo.Context) error {
 	// }
 	// defer tx.Rollback()
 
-	var user UserModel
-	if err := dbConn.GetContext(ctx, &user, "SELECT * FROM users WHERE name = ?", username); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
-		}
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
+	cachedUser, err := getUserNameResponse(ctx, username)
+	if errors.Is(err, sql.ErrNoRows) {
+		return echo.NewHTTPError(http.StatusNotFound, "not found user that has the userid in session")
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill user: "+err.Error())
 	}
 
 	headerIconHash := c.Request().Header.Get("If-None-Match")
-	if user.IconHash != nil && fmt.Sprintf(`"%s"`, *user.IconHash) == headerIconHash {
+	if fmt.Sprintf(`"%s"`, cachedUser.IconHash) == headerIconHash {
 		return c.NoContent(http.StatusNotModified)
 	}
 
 	// iconがディレクトリに存在するか確認
-	if _, err := os.Stat(fmt.Sprintf("%s/%d", iconDir, user.ID)); err != nil {
+	if _, err := os.Stat(fmt.Sprintf("%s/%d", iconDir, cachedUser.ID)); err != nil {
 		if os.IsNotExist(err) {
 			return c.File(fallbackImage)
 		} else {
@@ -123,7 +123,7 @@ func getIconHandler(c echo.Context) error {
 	// 画像を返す
 	// Content-Type: image/jpeg を設定する
 	c.Response().Header().Set("Content-Type", "image/jpeg")
-	return c.File(fmt.Sprintf("%s/%d", iconDir, user.ID))
+	return c.File(fmt.Sprintf("%s/%d", iconDir, cachedUser.ID))
 }
 
 func postIconHandler(c echo.Context) error {
@@ -461,6 +461,7 @@ type cachedUser struct {
 }
 
 var userCache Map[int64, cachedUser]
+var userNameCache Map[string, cachedUser]
 
 func getUserResponse(ctx context.Context, tx *sqlx.Tx, id int64) (User, error) {
 	fetched, found := userCache.Load(id)
@@ -492,10 +493,46 @@ func getUserResponse(ctx context.Context, tx *sqlx.Tx, id int64) (User, error) {
 	return user, nil
 }
 
+func getUserNameResponse(ctx context.Context, name string) (User, error) {
+	fetched, found := userNameCache.Load(name)
+
+	now := time.Now()
+	if found && fetched.fetchedAt.Add(1*time.Second+300*time.Millisecond).After(now) {
+		return fetched.user, nil
+	}
+
+	model := UserModel{}
+	if err := dbConn.GetContext(ctx, &model, "SELECT * FROM users WHERE name = ?", name); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return User{}, sql.ErrNoRows
+		}
+
+		return User{}, err
+	}
+
+	user, err := fillUserResponse(ctx, nil, model)
+
+	if err != nil {
+		return User{}, err
+	}
+
+	fetched.fetchedAt = now
+	fetched.user = user
+	userNameCache.Store(name, fetched)
+
+	return user, nil
+}
+
 func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (User, error) {
 	themeModel := ThemeModel{}
-	if err := tx.GetContext(ctx, &themeModel, "SELECT * FROM themes WHERE user_id = ?", userModel.ID); err != nil {
-		return User{}, err
+	if tx != nil {
+		if err := tx.GetContext(ctx, &themeModel, "SELECT * FROM themes WHERE user_id = ?", userModel.ID); err != nil {
+			return User{}, err
+		}
+	} else {
+		if err := dbConn.GetContext(ctx, &themeModel, "SELECT * FROM themes WHERE user_id = ?", userModel.ID); err != nil {
+			return User{}, err
+		}
 	}
 
 	iconHash := userModel.IconHash
