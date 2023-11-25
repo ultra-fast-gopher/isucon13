@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo-contrib/session"
@@ -64,6 +65,15 @@ type NGWord struct {
 	LivestreamID int64  `json:"livestream_id" db:"livestream_id"`
 	Word         string `json:"word" db:"word"`
 	CreatedAt    int64  `json:"created_at" db:"created_at"`
+}
+
+func toLowerIfASCII(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r <= unicode.MaxASCII && unicode.IsUpper(r) {
+			return unicode.ToLower(r)
+		}
+		return r
+	}, s)
 }
 
 func getLivecommentsHandler(c echo.Context) error {
@@ -209,8 +219,12 @@ func postLivecommentHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get NG words: "+err.Error())
 	}
 
+	comment := toLowerIfASCII(req.Comment)
+
 	for _, ngword := range ngwords {
-		if strings.Contains(strings.ToLower(req.Comment), strings.ToLower(ngword.Word)) {
+		w := toLowerIfASCII(ngword.Word)
+
+		if strings.Contains(comment, w) {
 			return echo.NewHTTPError(http.StatusBadRequest, "このコメントがスパム判定されました")
 		}
 	}
