@@ -93,7 +93,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to get users: "+err.Error())
 	// }
 
-	query := `SELECT u.id, u.name, COUNT(r.id) as reaction_count FROM users u INNER JOIN livestreams l ON l.user_id = u.id INNER JOIN reactions r ON r.livestream_id = l.id GROUP BY u.id`
+	query := `SELECT u.id, u.name, COUNT(r.id) as reaction_count FROM users u INNER JOIN livestreams l ON l.user_id = u.id LEFT JOIN reactions r ON r.livestream_id = l.id GROUP BY u.id`
 
 	var usernames map[int64]string = make(map[int64]string)
 	var reactionsCounter map[int64]int64 = make(map[int64]int64)
@@ -113,7 +113,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 		usernames[int64(id)] = username
 	}
 
-	query = `SELECT u.id, IFNULL(SUM(l2.tip), 0) as total_tips FROM users u INNER JOIN livestreams l ON l.user_id = u.id INNER JOIN livecomments l2 ON l2.livestream_id = l.id GROUP BY u.id;`
+	query = `SELECT u.id, IFNULL(SUM(l2.tip), 0) as total_tips FROM users u INNER JOIN livestreams l ON l.user_id = u.id LEFT JOIN livecomments l2 ON l2.livestream_id = l.id GROUP BY u.id;`
 
 	var commentsCounter map[int64]int64 = make(map[int64]int64)
 	rows, err = tx.Query(query)
