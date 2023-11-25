@@ -202,9 +202,9 @@ func searchLivestreamsHandler(c echo.Context) error {
 		}
 
 		for _, keyTaggedLivestream := range keyTaggedLivestreams {
-			ls := LivestreamModel{}
-			if err := tx.GetContext(ctx, &ls, "SELECT * FROM livestreams WHERE id = ?", keyTaggedLivestream.LivestreamID); err != nil {
-				return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
+			ls, err := getLivestream(ctx, tx, keyTaggedLivestream.LivestreamID)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream: "+err.Error())
 			}
 
 			livestreamModels = append(livestreamModels, &ls)
@@ -414,13 +414,13 @@ func getLivestreamHandler(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	livestreamModel := LivestreamModel{}
-	err = tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livestreamID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return echo.NewHTTPError(http.StatusNotFound, "not found livestream that has the given id")
-	}
+	livestreamModel, err := getLivestream(ctx, tx, int64(livestreamID))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream: "+err.Error())
+		if errors.Is(err, sql.ErrNoRows) {
+			return echo.NewHTTPError(http.StatusNotFound, "not found livestream that has the given id")
+		} else {
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream: "+err.Error())
+		}
 	}
 
 	livestream, err := fillLivestreamResponse(ctx, tx, livestreamModel)
@@ -454,7 +454,8 @@ func getLivecommentReportsHandler(c echo.Context) error {
 	defer tx.Rollback()
 
 	var livestreamModel LivestreamModel
-	if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livestreamID); err != nil {
+	livestreamModel, err = getLivestream(ctx, tx, int64(livestreamID))
+	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream: "+err.Error())
 	}
 
@@ -534,4 +535,23 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 		EndAt:        livestreamModel.EndAt,
 	}
 	return livestream, nil
+}
+
+var livestreamCache Map[int64, LivestreamModel]
+
+func getLivestream(ctx context.Context, tx *sqlx.Tx, livestreamID int64) (LivestreamModel, error) {
+	// キャッシュがあればそれを使う
+	livestreamModel, found := livestreamCache.Load(livestreamID)
+	if found {
+		return livestreamModel, nil
+	}
+
+	ls := LivestreamModel{}
+	if err := tx.GetContext(ctx, &ls, "SELECT * FROM livestreams WHERE id = ?", livestreamID); err != nil {
+		return LivestreamModel{}, err
+	}
+
+	livestreamCache.Store(livestreamID, ls)
+
+	return ls, nil
 }
