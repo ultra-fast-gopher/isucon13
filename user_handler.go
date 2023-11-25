@@ -93,27 +93,27 @@ func getIconHandler(c echo.Context) error {
 
 	username := c.Param("username")
 
-	// tx, err := dbConn.BeginTxx(ctx, nil)
-	// if err != nil {
-	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	// }
-	// defer tx.Rollback()
+	tx, err := dbConn.BeginTxx(ctx, nil)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	}
+	defer tx.Rollback()
 
-	var user UserModel
-	if err := dbConn.GetContext(ctx, &user, "SELECT * FROM users WHERE name = ?", username); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
-		}
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
+	cachedUser, err := getUserResponse(ctx, tx, 0, &username)
+	if errors.Is(err, sql.ErrNoRows) {
+		return echo.NewHTTPError(http.StatusNotFound, "not found user that has the userid in session")
+	}
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill user: "+err.Error())
 	}
 
 	headerIconHash := c.Request().Header.Get("If-None-Match")
-	if user.IconHash != nil && fmt.Sprintf(`"%s"`, *user.IconHash) == headerIconHash {
+	if fmt.Sprintf(`"%s"`, cachedUser.IconHash) == headerIconHash {
 		return c.NoContent(http.StatusNotModified)
 	}
 
 	// iconがディレクトリに存在するか確認
-	if _, err := os.Stat(fmt.Sprintf("%s/%d", iconDir, user.ID)); err != nil {
+	if _, err := os.Stat(fmt.Sprintf("%s/%d", iconDir, cachedUser.ID)); err != nil {
 		if os.IsNotExist(err) {
 			return c.File(fallbackImage)
 		} else {
@@ -123,7 +123,7 @@ func getIconHandler(c echo.Context) error {
 	// 画像を返す
 	// Content-Type: image/jpeg を設定する
 	c.Response().Header().Set("Content-Type", "image/jpeg")
-	return c.File(fmt.Sprintf("%s/%d", iconDir, user.ID))
+	return c.File(fmt.Sprintf("%s/%d", iconDir, cachedUser.ID))
 }
 
 func postIconHandler(c echo.Context) error {
@@ -201,7 +201,7 @@ func getMeHandler(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	user, err := getUserResponse(ctx, tx, userID)
+	user, err := getUserResponse(ctx, tx, userID, nil)
 	if errors.Is(err, sql.ErrNoRows) {
 		return echo.NewHTTPError(http.StatusNotFound, "not found user that has the userid in session")
 	}
@@ -419,7 +419,7 @@ func getUserHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
 	}
 
-	user, err := getUserResponse(ctx, tx, userModel.ID)
+	user, err := getUserResponse(ctx, tx, userModel.ID, nil)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill user: "+err.Error())
 	}
@@ -461,9 +461,18 @@ type cachedUser struct {
 }
 
 var userCache Map[int64, cachedUser]
+var userNameCache Map[string, cachedUser]
 
-func getUserResponse(ctx context.Context, tx *sqlx.Tx, id int64) (User, error) {
-	fetched, found := userCache.Load(id)
+func getUserResponse(ctx context.Context, tx *sqlx.Tx, id int64, name *string) (User, error) {
+	var (
+		fetched cachedUser
+		found   bool
+	)
+	if name != nil {
+		fetched, found = userNameCache.Load(*name)
+	} else {
+		fetched, found = userCache.Load(id)
+	}
 
 	now := time.Now()
 	if found && fetched.fetchedAt.Add(1*time.Second+300*time.Millisecond).After(now) {
@@ -488,6 +497,7 @@ func getUserResponse(ctx context.Context, tx *sqlx.Tx, id int64) (User, error) {
 	fetched.fetchedAt = now
 	fetched.user = user
 	userCache.Store(id, fetched)
+	userNameCache.Store(user.Name, fetched)
 
 	return user, nil
 }

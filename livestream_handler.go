@@ -492,7 +492,7 @@ func getLivecommentReportsHandler(c echo.Context) error {
 var livestreamTagsCache Map[int64, []int64]
 
 func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel LivestreamModel) (Livestream, error) {
-	owner, err := getUserResponse(ctx, tx, livestreamModel.UserID)
+	owner, err := getUserResponse(ctx, tx, livestreamModel.UserID, nil)
 	if err != nil {
 		return Livestream{}, err
 	}

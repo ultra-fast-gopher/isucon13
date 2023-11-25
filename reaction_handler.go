@@ -147,7 +147,7 @@ func postReactionHandler(c echo.Context) error {
 }
 
 func fillReactionResponse(ctx context.Context, tx *sqlx.Tx, reactionModel ReactionModel, cachedLivestreamModel *LivestreamModel) (Reaction, error) {
-	user, err := getUserResponse(ctx, tx, reactionModel.UserID)
+	user, err := getUserResponse(ctx, tx, reactionModel.UserID, nil)
 	if err != nil {
 		return Reaction{}, err
 	}
