@@ -16,6 +16,11 @@ jobs:
           make build
           sudo mv isupipe /home/isucon/webapp/go
           sudo systemctl restart isupipe-go.service
+          rm -r /home/isucon/webapp/pdns || true
+          rm -r /home/isucon/webapp/sql || true
+          cp -r pdns /home/isucon/webapp/pdns
+          cp -r sql /home/isucon/webapp/sql
+
       - name: Notify on Discord
         run: |
           curl -H "Content-Type: application/json" -X POST -d '{"username": "ultra-fast-gopher", "content": "Deploy for ${{ github.sha }} finished on node1"}' \
