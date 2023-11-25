@@ -18,7 +18,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/kaz/pprotein/integration/standalone"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
@@ -149,8 +148,8 @@ func (j *JSONSerializer) Deserialize(c echo.Context, i interface{}) error {
 func main() {
 	e := echo.New()
 	e.Debug = false
-	e.Logger.SetLevel(echolog.DEBUG)
-	e.Use(middleware.Logger())
+	e.Logger.SetLevel(echolog.WARN)
+	// e.Use(middleware.Logger())
 	cookieStore := sessions.NewCookieStore(secret)
 	cookieStore.Options.Domain = "*.u.isucon.dev"
 	e.Use(session.Middleware(cookieStore))
