@@ -38,7 +38,9 @@ var (
 )
 
 func init() {
-	go standalone.Integrate(":19000")
+	if false {
+		go standalone.Integrate(":19000")
+	}
 
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 	if secretKey, ok := os.LookupEnv("ISUCON13_SESSION_SECRETKEY"); ok {
