@@ -479,7 +479,7 @@ func getUserResponse(ctx context.Context, tx *sqlx.Tx, id int64) (User, error) {
 		return User{}, err
 	}
 
-	user, err := fillUserResponse(ctx, tx, model)
+	user, err := fillUserResponse(ctx, nil, model)
 
 	if err != nil {
 		return User{}, err
@@ -494,8 +494,14 @@ func getUserResponse(ctx context.Context, tx *sqlx.Tx, id int64) (User, error) {
 
 func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (User, error) {
 	themeModel := ThemeModel{}
-	if err := tx.GetContext(ctx, &themeModel, "SELECT * FROM themes WHERE user_id = ?", userModel.ID); err != nil {
-		return User{}, err
+	if tx != nil {
+		if err := tx.GetContext(ctx, &themeModel, "SELECT * FROM themes WHERE user_id = ?", userModel.ID); err != nil {
+			return User{}, err
+		}
+	} else {
+		if err := dbConn.GetContext(ctx, &themeModel, "SELECT * FROM themes WHERE user_id = ?", userModel.ID); err != nil {
+			return User{}, err
+		}
 	}
 
 	iconHash := userModel.IconHash
