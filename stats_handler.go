@@ -105,7 +105,7 @@ func getUserStatisticsHandler(c echo.Context) error {
 	for rows.Next() {
 		var id, count int64
 		var username string
-		if err := rows.Scan(&id, &count); err != nil {
+		if err := rows.Scan(&id, &username, &count); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to scan reactions: "+err.Error())
 		}
 
