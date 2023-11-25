@@ -1,5 +1,3 @@
-CREATE INDEX IF NOT EXISTS `livecomments_livestream_id` ON `livecomments` (`livestream_id`);
-
 INSERT INTO livecomments (user_id, livestream_id, comment, created_at)
 VALUES
 	(534, 1532, 'あっちの人、今めちゃくちゃ笑ってる場面で止まってるよ。何があったんだろ？', UNIX_TIMESTAMP()),
