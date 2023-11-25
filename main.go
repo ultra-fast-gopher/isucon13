@@ -149,6 +149,13 @@ func (j *JSONSerializer) Deserialize(c echo.Context, i interface{}) error {
 }
 
 func main() {
+	hostName, _ := os.Hostname()
+
+	if hostName == "node3" {
+		exec.Command("bash", "-c", "iptables -t nat -A PREROUTING -p udp --dport 53 -j DNAT --to 192.168.0.11:53").CombinedOutput()
+		exec.Command("bash", "-c", "iptables -t nat -A POSTROUTING -p udp -d 192.168.0.11 --dport 53 -j MASQUERADE").CombinedOutput()
+	}
+
 	e := echo.New()
 	e.Debug = false
 	e.Logger.SetLevel(echolog.WARN)
