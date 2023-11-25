@@ -109,16 +109,16 @@ func getIconHandler(c echo.Context) error {
 		return c.NoContent(http.StatusNotModified)
 	}
 
-	var image []byte
-	if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", user.ID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+	// iconがディレクトリに存在するか確認
+	if _, err := os.Stat(fmt.Sprintf("%s%d", iconDir, user.ID)); err != nil {
+		if os.IsNotExist(err) {
 			return c.File(fallbackImage)
 		} else {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user icon: "+err.Error())
 		}
 	}
-
-	return c.Blob(http.StatusOK, "image/jpeg", image)
+	// 画像を返す
+	return c.File(fmt.Sprintf("%s%d", iconDir, user.ID))
 }
 
 func postIconHandler(c echo.Context) error {
@@ -145,13 +145,16 @@ func postIconHandler(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.ExecContext(ctx, "DELETE FROM icons WHERE user_id = ?", userID); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete old user icon: "+err.Error())
+	rs, err := tx.ExecContext(ctx, "INSERT INTO icons (user_id) VALUES (?)", userID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to insert icon: "+err.Error())
 	}
 
-	rs, err := tx.ExecContext(ctx, "INSERT INTO icons (user_id, image) VALUES (?, ?)", userID, req.Image)
+	// 画像をファイルに書き出す
+	imageFilePath := fmt.Sprintf("%s%d", iconDir, userID)
+	err = os.WriteFile(imageFilePath, req.Image, 0644)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to insert new user icon: "+err.Error())
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to write image file: "+err.Error())
 	}
 
 	iconHash := sha256.Sum256(req.Image)
@@ -419,15 +422,19 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 	iconHash := userModel.IconHash
 	if iconHash == nil {
 		var image []byte
-		if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userModel.ID); err != nil {
-			if !errors.Is(err, sql.ErrNoRows) {
+		if _, err := os.Stat(fmt.Sprintf("%s%d", iconDir, userModel.ID)); err != nil {
+			if os.IsNotExist(err) {
+				image, err = os.ReadFile(fallbackImage)
+			} else {
 				return User{}, err
 			}
-			image, err = os.ReadFile(fallbackImage)
+		} else {
+			image, err = os.ReadFile(fmt.Sprintf("%s%d", iconDir, userModel.ID))
 			if err != nil {
 				return User{}, err
 			}
 		}
+
 		iconHashStr := fmt.Sprintf("%x", sha256.Sum256(image))
 		iconHash = &iconHashStr
 	}
