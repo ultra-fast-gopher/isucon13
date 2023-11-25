@@ -1,104 +1,103 @@
-INSERT INTO tags(name) VALUES ('ライブ配信');
-INSERT INTO tags(name) VALUES ('ゲーム実況');
-INSERT INTO tags(name) VALUES ('生放送');
-INSERT INTO tags(name) VALUES ('アドバイス');
-INSERT INTO tags(name) VALUES ('初心者歓迎');
-INSERT INTO tags(name) VALUES ('プロゲーマー');
-INSERT INTO tags(name) VALUES ('新作ゲーム');
-INSERT INTO tags(name) VALUES ('レトロゲーム');
-INSERT INTO tags(name) VALUES ('RPG');
-INSERT INTO tags(name) VALUES ('FPS');
-INSERT INTO tags(name) VALUES ('アクションゲーム');
-INSERT INTO tags(name) VALUES ('対戦ゲーム');
-INSERT INTO tags(name) VALUES ('マルチプレイ');
-INSERT INTO tags(name) VALUES ('シングルプレイ');
-INSERT INTO tags(name) VALUES ('ゲーム解説');
-INSERT INTO tags(name) VALUES ('ホラーゲーム');
-INSERT INTO tags(name) VALUES ('イベント生放送');
-INSERT INTO tags(name) VALUES ('新情報発表');
-INSERT INTO tags(name) VALUES ('Q&Aセッション');
-INSERT INTO tags(name) VALUES ('チャット交流');
-INSERT INTO tags(name) VALUES ('視聴者参加');
-INSERT INTO tags(name) VALUES ('音楽ライブ');
-INSERT INTO tags(name) VALUES ('カバーソング');
-INSERT INTO tags(name) VALUES ('オリジナル楽曲');
-INSERT INTO tags(name) VALUES ('アコースティック');
-INSERT INTO tags(name) VALUES ('歌配信');
-INSERT INTO tags(name) VALUES ('楽器演奏');
-INSERT INTO tags(name) VALUES ('ギター');
-INSERT INTO tags(name) VALUES ('ピアノ');
-INSERT INTO tags(name) VALUES ('バンドセッション');
-INSERT INTO tags(name) VALUES ('DJセット');
-INSERT INTO tags(name) VALUES ('トーク配信');
-INSERT INTO tags(name) VALUES ('朝活');
-INSERT INTO tags(name) VALUES ('夜ふかし');
-INSERT INTO tags(name) VALUES ('日常話');
-INSERT INTO tags(name) VALUES ('趣味の話');
-INSERT INTO tags(name) VALUES ('語学学習');
-INSERT INTO tags(name) VALUES ('お料理配信');
-INSERT INTO tags(name) VALUES ('手料理');
-INSERT INTO tags(name) VALUES ('レシピ紹介');
-INSERT INTO tags(name) VALUES ('アート配信');
-INSERT INTO tags(name) VALUES ('絵描き');
-INSERT INTO tags(name) VALUES ('DIY');
-INSERT INTO tags(name) VALUES ('手芸');
-INSERT INTO tags(name) VALUES ('アニメトーク');
-INSERT INTO tags(name) VALUES ('映画レビュー');
-INSERT INTO tags(name) VALUES ('読書感想');
-INSERT INTO tags(name) VALUES ('ファッション');
-INSERT INTO tags(name) VALUES ('メイク');
-INSERT INTO tags(name) VALUES ('ビューティー');
-INSERT INTO tags(name) VALUES ('健康');
-INSERT INTO tags(name) VALUES ('ワークアウト');
-INSERT INTO tags(name) VALUES ('ヨガ');
-INSERT INTO tags(name) VALUES ('ダンス');
-INSERT INTO tags(name) VALUES ('旅行記');
-INSERT INTO tags(name) VALUES ('アウトドア');
-INSERT INTO tags(name) VALUES ('キャンプ');
-INSERT INTO tags(name) VALUES ('ペットと一緒');
-INSERT INTO tags(name) VALUES ('猫');
-INSERT INTO tags(name) VALUES ('犬');
-INSERT INTO tags(name) VALUES ('釣り');
-INSERT INTO tags(name) VALUES ('ガーデニング');
-INSERT INTO tags(name) VALUES ('テクノロジー');
-INSERT INTO tags(name) VALUES ('ガジェット紹介');
-INSERT INTO tags(name) VALUES ('プログラミング');
-INSERT INTO tags(name) VALUES ('DIY電子工作');
-INSERT INTO tags(name) VALUES ('ニュース解説');
-INSERT INTO tags(name) VALUES ('歴史');
-INSERT INTO tags(name) VALUES ('文化');
-INSERT INTO tags(name) VALUES ('社会問題');
-INSERT INTO tags(name) VALUES ('心理学');
-INSERT INTO tags(name) VALUES ('宇宙');
-INSERT INTO tags(name) VALUES ('科学');
-INSERT INTO tags(name) VALUES ('マジック');
-INSERT INTO tags(name) VALUES ('コメディ');
-INSERT INTO tags(name) VALUES ('スポーツ');
-INSERT INTO tags(name) VALUES ('サッカー');
-INSERT INTO tags(name) VALUES ('野球');
-INSERT INTO tags(name) VALUES ('バスケットボール');
-INSERT INTO tags(name) VALUES ('ライフハック');
-INSERT INTO tags(name) VALUES ('教育');
-INSERT INTO tags(name) VALUES ('子育て');
-INSERT INTO tags(name) VALUES ('ビジネス');
-INSERT INTO tags(name) VALUES ('起業');
-INSERT INTO tags(name) VALUES ('投資');
-INSERT INTO tags(name) VALUES ('仮想通貨');
-INSERT INTO tags(name) VALUES ('株式投資');
-INSERT INTO tags(name) VALUES ('不動産');
-INSERT INTO tags(name) VALUES ('キャリア');
-INSERT INTO tags(name) VALUES ('スピリチュアル');
-INSERT INTO tags(name) VALUES ('占い');
-INSERT INTO tags(name) VALUES ('手相');
-INSERT INTO tags(name) VALUES ('オカルト');
-INSERT INTO tags(name) VALUES ('UFO');
-INSERT INTO tags(name) VALUES ('都市伝説');
-INSERT INTO tags(name) VALUES ('コンサート');
-INSERT INTO tags(name) VALUES ('ファンミーティング');
-INSERT INTO tags(name) VALUES ('コラボ配信');
-INSERT INTO tags(name) VALUES ('記念配信');
-INSERT INTO tags(name) VALUES ('生誕祭');
-INSERT INTO tags(name) VALUES ('周年記念');
-INSERT INTO tags(name) VALUES ('サプライズ');
-INSERT INTO tags(name) VALUES ('椅子');
-
+ライブ配信
+ゲーム実況
+生放送
+アドバイス
+初心者歓迎
+プロゲーマー
+新作ゲーム
+レトロゲーム
+RPG
+FPS
+アクションゲーム
+対戦ゲーム
+マルチプレイ
+シングルプレイ
+ゲーム解説
+ホラーゲーム
+イベント生放送
+新情報発表
+Q&Aセッション
+チャット交流
+視聴者参加
+音楽ライブ
+カバーソング
+オリジナル楽曲
+アコースティック
+歌配信
+楽器演奏
+ギター
+ピアノ
+バンドセッション
+DJセット
+トーク配信
+朝活
+夜ふかし
+日常話
+趣味の話
+語学学習
+お料理配信
+手料理
+レシピ紹介
+アート配信
+絵描き
+DIY
+手芸
+アニメトーク
+映画レビュー
+読書感想
+ファッション
+メイク
+ビューティー
+健康
+ワークアウト
+ヨガ
+ダンス
+旅行記
+アウトドア
+キャンプ
+ペットと一緒
+猫
+犬
+釣り
+ガーデニング
+テクノロジー
+ガジェット紹介
+プログラミング
+DIY電子工作
+ニュース解説
+歴史
+文化
+社会問題
+心理学
+宇宙
+科学
+マジック
+コメディ
+スポーツ
+サッカー
+野球
+バスケットボール
+ライフハック
+教育
+子育て
+ビジネス
+起業
+投資
+仮想通貨
+株式投資
+不動産
+キャリア
+スピリチュアル
+占い
+手相
+オカルト
+UFO
+都市伝説
+コンサート
+ファンミーティング
+コラボ配信
+記念配信
+生誕祭
+周年記念
+サプライズ
+椅子

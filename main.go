@@ -121,6 +121,7 @@ func initializeHandler(c echo.Context) error {
 	}
 	userCache = Map[int64, cachedUser]{}
 	livestreamTagsCache = Map[int64, []int64]{}
+	livestreamCache = Map[int64, LivestreamModel]{}
 	initDNSRecordMap()
 
 	os.RemoveAll(iconDir)

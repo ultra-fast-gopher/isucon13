@@ -103,9 +103,9 @@ func getLivecommentsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livecomments: "+err.Error())
 	}
 
-	livestreamModel := LivestreamModel{}
-	if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livestreamID); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams getLivecommentsHandler: "+err.Error())
+	livestreamModel, err := getLivestream(ctx, tx, int64(livestreamID))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestream: "+err.Error())
 	}
 
 	livecomments := make([]Livecomment, len(livecommentModels))
@@ -194,7 +194,8 @@ func postLivecommentHandler(c echo.Context) error {
 	defer tx.Rollback()
 
 	var livestreamModel LivestreamModel
-	if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livestreamID); err != nil {
+	livestreamModel, err = getLivestream(ctx, tx, int64(livestreamID))
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return echo.NewHTTPError(http.StatusNotFound, "livestream not found")
 		} else {
@@ -274,8 +275,8 @@ func reportLivecommentHandler(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	var livestreamModel LivestreamModel
-	if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livestreamID); err != nil {
+	_, err = getLivestream(ctx, tx, int64(livestreamID))
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return echo.NewHTTPError(http.StatusNotFound, "livestream not found")
 		} else {
@@ -351,11 +352,13 @@ func moderateHandler(c echo.Context) error {
 	defer tx.Rollback()
 
 	// 配信者自身の配信に対するmoderateなのかを検証
-	var ownedLivestreams []LivestreamModel
-	if err := tx.SelectContext(ctx, &ownedLivestreams, "SELECT * FROM livestreams WHERE id = ? AND user_id = ?", livestreamID, userID); err != nil {
+	var livestreamModel LivestreamModel
+	livestreamModel, err = getLivestream(ctx, tx, int64(livestreamID))
+	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
 	}
-	if len(ownedLivestreams) == 0 {
+
+	if livestreamModel.UserID != userID {
 		return echo.NewHTTPError(http.StatusBadRequest, "A streamer can't moderate livestreams that other streamers own")
 	}
 
@@ -405,11 +408,12 @@ func fillLivecommentResponse(ctx context.Context, tx *sqlx.Tx, livecommentModel 
 		return Livecomment{}, err
 	}
 
-	livestreamModel := LivestreamModel{}
+	var livestreamModel LivestreamModel
 	if cachedLivestreamModel != nil {
 		livestreamModel = *cachedLivestreamModel
 	} else {
-		if err := tx.GetContext(ctx, &livestreamModel, "SELECT * FROM livestreams WHERE id = ?", livecommentModel.LivestreamID); err != nil {
+		livestreamModel, err = getLivestream(ctx, tx, int64(livecommentModel.LivestreamID))
+		if err != nil {
 			return Livecomment{}, err
 		}
 	}
