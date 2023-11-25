@@ -1,5 +1,3 @@
-ALTER TABLE users ADD icon_hash varchar(255);
-
 -- NOTE: パスワードは `test`
 INSERT INTO users (id, name, display_name, description, password) VALUES (1, 'test001', '検証用ユーザ', '社内検証用', '$2a$04$LBt4Dc0Uu3HE0c.8KVMtbOnXwd4PHCboGxa2I57RmJFQVba/B0U8a');
 INSERT INTO themes (user_id, dark_mode) VALUES (1, true);
