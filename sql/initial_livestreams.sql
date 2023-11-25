@@ -1,5 +1,3 @@
-ALTER TABLE `isupipe`.`livestreams` ADD INDEX `livestreams_user_id` (`user_id`);
-
 CREATE INDEX IF NOT EXISTS `livestreams_user_id` ON `isupipe`.`livestreams` (`user_id`);
 
 INSERT INTO livestreams (user_id, title, description, playlist_url, thumbnail_url, start_at, end_at)
