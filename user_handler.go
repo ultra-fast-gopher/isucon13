@@ -110,7 +110,7 @@ func getIconHandler(c echo.Context) error {
 	}
 
 	// iconがディレクトリに存在するか確認
-	if _, err := os.Stat(fmt.Sprintf("%s%d", iconDir, user.ID)); err != nil {
+	if _, err := os.Stat(fmt.Sprintf("%s/%d", iconDir, user.ID)); err != nil {
 		if os.IsNotExist(err) {
 			return c.File(fallbackImage)
 		} else {
@@ -118,7 +118,9 @@ func getIconHandler(c echo.Context) error {
 		}
 	}
 	// 画像を返す
-	return c.File(fmt.Sprintf("%s%d", iconDir, user.ID))
+	// Content-Type: image/jpeg を設定する
+	c.Response().Header().Set("Content-Type", "image/jpeg")
+	return c.File(fmt.Sprintf("%s/%d", iconDir, user.ID))
 }
 
 func postIconHandler(c echo.Context) error {
@@ -151,7 +153,7 @@ func postIconHandler(c echo.Context) error {
 	}
 
 	// 画像をファイルに書き出す
-	imageFilePath := fmt.Sprintf("%s%d", iconDir, userID)
+	imageFilePath := fmt.Sprintf("%s/%d", iconDir, userID)
 	err = os.WriteFile(imageFilePath, req.Image, 0644)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to write image file: "+err.Error())
@@ -422,14 +424,14 @@ func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (Us
 	iconHash := userModel.IconHash
 	if iconHash == nil {
 		var image []byte
-		if _, err := os.Stat(fmt.Sprintf("%s%d", iconDir, userModel.ID)); err != nil {
+		if _, err := os.Stat(fmt.Sprintf("%s/%d", iconDir, userModel.ID)); err != nil {
 			if os.IsNotExist(err) {
 				image, err = os.ReadFile(fallbackImage)
 			} else {
 				return User{}, err
 			}
 		} else {
-			image, err = os.ReadFile(fmt.Sprintf("%s%d", iconDir, userModel.ID))
+			image, err = os.ReadFile(fmt.Sprintf("%s/%d", iconDir, userModel.ID))
 			if err != nil {
 				return User{}, err
 			}
