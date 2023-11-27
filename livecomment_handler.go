@@ -429,7 +429,6 @@ func moderateHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
 	ngWordsCache.Delete(int64(livestreamID))
-	time.Sleep(500 * time.Millisecond)
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{
 		"word_id": wordID,
