@@ -39,7 +39,7 @@ var (
 )
 
 func init() {
-	if false {
+	if true {
 		go standalone.Integrate(":19000")
 	}
 
@@ -132,7 +132,7 @@ func initializeHandler(c echo.Context) error {
 	os.RemoveAll(iconDir)
 	os.MkdirAll(iconDir, 0755)
 
-	// go http.Get("http://ufgportal:9000/api/group/collect")
+	go http.Get("http://ufgportal:9000/api/group/collect")
 
 	c.Request().Header.Add("Content-Type", "application/json;charset=utf-8")
 	return c.JSON(http.StatusOK, InitializeResponse{
