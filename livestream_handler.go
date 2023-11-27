@@ -160,7 +160,7 @@ func reserveLivestreamHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
 
-	livestream, err := fillLivestreamResponse(ctx, tx, *livestreamModel)
+	livestream, err := fillLivestreamResponse(ctx, dbConn, *livestreamModel)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill livestream: "+err.Error())
 	}
