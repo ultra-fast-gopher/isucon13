@@ -1,9 +1,10 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
-	"net/http"
 )
 
 type PostBcryptCompairHandler struct {
@@ -42,7 +43,7 @@ func bcryptSumHandler(c echo.Context) error {
 		return err
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcryptDefaultCost)
 	if err != nil {
 		return err
 	}
