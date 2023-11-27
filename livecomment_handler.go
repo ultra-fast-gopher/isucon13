@@ -283,6 +283,7 @@ func postLivecommentHandler(c echo.Context) error {
 	if err := tx.Commit(); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
+	livecommentsCache.Store(livecommentID, &livecommentModel)
 
 	return c.JSON(http.StatusCreated, livecomment)
 }
@@ -469,6 +470,8 @@ func fillLivecommentResponse(ctx context.Context, tx DB, livecommentModel Liveco
 	return livecomment, nil
 }
 
+var livecommentsCache Map[int64, *LivecommentModel]
+
 func fillLivecommentReportResponse(ctx context.Context, tx DB, reportModel LivecommentReportModel) (LivecommentReport, error) {
 	reporter, err := getUserResponse(ctx, tx, reportModel.UserID)
 	if err != nil {
@@ -476,8 +479,16 @@ func fillLivecommentReportResponse(ctx context.Context, tx DB, reportModel Livec
 	}
 
 	livecommentModel := LivecommentModel{}
-	if err := tx.GetContext(ctx, &livecommentModel, "SELECT * FROM livecomments WHERE id = ?", reportModel.LivecommentID); err != nil {
-		return LivecommentReport{}, fmt.Errorf("no such comment %d: %w", reportModel.LivecommentID, err)
+	comment, found := livecommentsCache.Load(reportModel.LivecommentID)
+
+	if found {
+		livecommentModel = *comment
+	} else {
+		if err := tx.GetContext(ctx, &livecommentModel, "SELECT * FROM livecomments WHERE id = ?", reportModel.LivecommentID); err != nil {
+			return LivecommentReport{}, fmt.Errorf("no such comment %d: %w", reportModel.LivecommentID, err)
+		}
+
+		livecommentsCache.Store(reportModel.LivecommentID, &livecommentModel)
 	}
 	livecomment, err := fillLivecommentResponse(ctx, tx, livecommentModel, nil)
 	if err != nil {

@@ -127,6 +127,7 @@ func initializeHandler(c echo.Context) error {
 	livestreamTagsCache = Map[int64, []int64]{}
 	livestreamCache = Map[int64, LivestreamModel]{}
 	ngWordsCache = Map[int64, []*NGWord]{}
+	livecommentsCache = Map[int64, *LivecommentModel]{}
 	initDNSRecordMap()
 
 	os.RemoveAll(iconDir)
