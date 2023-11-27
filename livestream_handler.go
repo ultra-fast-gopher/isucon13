@@ -452,11 +452,11 @@ func getLivecommentReportsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "livestream_id in path must be integer")
 	}
 
-	// tx, err := dbConn.BeginTxx(ctx, nil)
-	// if err != nil {
-	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	// }
-	// defer tx.Rollback()
+	tx, err := dbConn.BeginTxx(ctx, nil)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	}
+	defer tx.Rollback()
 	tx := dbConn
 
 	var livestreamModel LivestreamModel
@@ -483,6 +483,7 @@ func getLivecommentReportsHandler(c echo.Context) error {
 	for i := range reportModels {
 		report, err := fillLivecommentReportResponse(ctx, tx, *reportModels[i])
 		if err != nil {
+			continue
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill livecomment report: "+err.Error())
 		}
 		reports[i] = report

@@ -428,7 +428,7 @@ func moderateHandler(c echo.Context) error {
 	if err := tx.Commit(); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
-	// time.Sleep(500 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	ngWordsCache.Delete(int64(livestreamID))
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{
