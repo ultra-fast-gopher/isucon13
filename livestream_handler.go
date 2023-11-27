@@ -457,7 +457,7 @@ func getLivecommentReportsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
 	}
 	defer tx.Rollback()
-	tx := dbConn
+	// tx := dbConn
 
 	var livestreamModel LivestreamModel
 	livestreamModel, err = getLivestream(ctx, tx, int64(livestreamID))
@@ -489,9 +489,9 @@ func getLivecommentReportsHandler(c echo.Context) error {
 		reports[i] = report
 	}
 
-	// if err := tx.Commit(); err != nil {
-	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	// }
+	if err := tx.Commit(); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	}
 
 	return c.JSON(http.StatusOK, reports)
 }
