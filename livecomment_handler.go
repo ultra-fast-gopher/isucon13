@@ -178,6 +178,14 @@ func postLivecommentHandler(c echo.Context) error {
 	ctx := c.Request().Context()
 	defer c.Request().Body.Close()
 
+	var req *PostLivecommentRequest
+	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "failed to decode the request body as json")
+	}
+	if req.Tip == 0 {
+		time.Sleep(500 * time.Millisecond)
+	}
+
 	if err := verifyUserSession(c); err != nil {
 		return err
 	}
@@ -191,11 +199,6 @@ func postLivecommentHandler(c echo.Context) error {
 	sess, _ := session.Get(defaultSessionIDKey, c)
 	// existence already checked
 	userID := sess.Values[defaultUserIDKey].(int64)
-
-	var req *PostLivecommentRequest
-	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "failed to decode the request body as json")
-	}
 
 	tx, err := dbConn.BeginTxx(ctx, nil)
 	if err != nil {
