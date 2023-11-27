@@ -160,12 +160,17 @@ func getNgwords(c echo.Context) error {
 	tx := dbConn
 
 	var ngWords []*NGWord
-	if err := tx.SelectContext(ctx, &ngWords, "SELECT * FROM ng_words WHERE user_id = ? AND livestream_id = ? ORDER BY created_at DESC", userID, livestreamID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return c.JSON(http.StatusOK, []*NGWord{})
-		} else {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get NG words: "+err.Error())
+	ngWords, found := ngWordsCache.Load(int64(livestreamID))
+
+	if !found {
+		if err := tx.SelectContext(ctx, &ngWords, "SELECT * FROM ng_words WHERE user_id = ? AND livestream_id = ? ORDER BY created_at DESC", userID, livestreamID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return c.JSON(http.StatusOK, []*NGWord{})
+			} else {
+				return echo.NewHTTPError(http.StatusInternalServerError, "failed to get NG words: "+err.Error())
+			}
 		}
+		ngWordsCache.Store(int64(livestreamID), ngWords)
 	}
 
 	// if err := tx.Commit(); err != nil {
@@ -174,6 +179,8 @@ func getNgwords(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, ngWords)
 }
+
+var ngWordsCache Map[int64, []*NGWord]
 
 func postLivecommentHandler(c echo.Context) error {
 	ctx := c.Request().Context()
@@ -219,8 +226,13 @@ func postLivecommentHandler(c echo.Context) error {
 
 	// スパム判定
 	var ngwords []*NGWord
-	if err := tx.SelectContext(ctx, &ngwords, "SELECT id, user_id, livestream_id, word FROM ng_words WHERE user_id = ? AND livestream_id = ?", livestreamModel.UserID, livestreamModel.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get NG words: "+err.Error())
+	ngwords, found := ngWordsCache.Load(livestreamModel.UserID)
+
+	if !found {
+		if err := tx.SelectContext(ctx, &ngwords, "SELECT * FROM ng_words WHERE livestream_id = ? ORDER BY created_at DESC", livestreamModel.UserID, livestreamModel.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return echo.NewHTTPError(http.StatusInternalServerError, "failed to get NG words: "+err.Error())
+		}
+		ngWordsCache.Store(livestreamModel.ID, ngwords)
 	}
 
 	comment := toLowerIfASCII(req.Comment)
@@ -406,6 +418,7 @@ func moderateHandler(c echo.Context) error {
 	if err := tx.Commit(); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
+	ngWordsCache.Delete(int64(livestreamID))
 	time.Sleep(500 * time.Millisecond)
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{
