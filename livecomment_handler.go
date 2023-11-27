@@ -391,20 +391,12 @@ func moderateHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get last inserted NG word id: "+err.Error())
 	}
 
-	var ngwords []*NGWord
-	if err := tx.SelectContext(ctx, &ngwords, "SELECT * FROM ng_words WHERE livestream_id = ?", livestreamID); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get NG words: "+err.Error())
-	}
-
-	// NGワードにヒットする過去の投稿も全削除する
-	for _, ngword := range ngwords {
-		query := `
+	query := `
 			DELETE FROM livecomments
 			WHERE livestream_id = ? AND comment like CONCAT('%', ?, '%');
 		`
-		if _, err := tx.ExecContext(ctx, query, livestreamID, ngword.Word); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete old livecomments that hit spams: "+err.Error())
-		}
+	if _, err := tx.ExecContext(ctx, query, livestreamID, req.NGWord); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to delete old livecomments that hit spams: "+err.Error())
 	}
 
 	if err := tx.Commit(); err != nil {
