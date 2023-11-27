@@ -4,6 +4,7 @@ package main
 // sqlx的な参考: https://jmoiron.github.io/sqlx/
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -267,3 +268,15 @@ func errorResponseHandler(err error, c echo.Context) {
 		c.Logger().Errorf("%+v", e)
 	}
 }
+
+type DB interface {
+	GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+	PreparexContext(ctx context.Context, query string) (*sqlx.Stmt, error)
+	QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row
+	QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error)
+	Rebind(query string) string
+	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+}
+
+var _ DB = &sqlx.DB{}
+var _ DB = &sqlx.Tx{}
