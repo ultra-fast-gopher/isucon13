@@ -152,6 +152,16 @@ func getNgwords(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "livestream_id in path must be integer")
 	}
 
+	liveStream, err := getLivestream(ctx, dbConn, int64(livestreamID))
+
+	if err != nil {
+		return c.JSON(http.StatusOK, []*NGWord{})
+	}
+
+	if liveStream.UserID != userID {
+		return c.JSON(http.StatusOK, []*NGWord{})
+	}
+
 	// tx, err := dbConn.BeginTxx(ctx, nil)
 	// if err != nil {
 	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
