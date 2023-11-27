@@ -245,12 +245,12 @@ func postLivecommentHandler(c echo.Context) error {
 		ngWordsCache.Store(livestreamModel.ID, ngwords)
 	}
 
-	comment := toLowerIfASCII(req.Comment)
+	// comment := toLowerIfASCII(req.Comment)
 
 	for _, ngword := range ngwords {
-		w := toLowerIfASCII(ngword.Word)
+		// w := toLowerIfASCII(ngword.Word)
 
-		if strings.Contains(comment, w) {
+		if strings.Contains(req.Comment, ngword.Word) {
 			return echo.NewHTTPError(http.StatusBadRequest, "このコメントがスパム判定されました")
 		}
 	}
