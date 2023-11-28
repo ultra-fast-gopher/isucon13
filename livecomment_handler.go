@@ -386,15 +386,9 @@ func moderateHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to decode the request body as json")
 	}
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	}
-	defer tx.Rollback()
-
 	// 配信者自身の配信に対するmoderateなのかを検証
 	var livestreamModel LivestreamModel
-	livestreamModel, err = getLivestream(ctx, tx, int64(livestreamID))
+	livestreamModel, err = getLivestream(ctx, dbConn, int64(livestreamID))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get livestreams: "+err.Error())
 	}
@@ -402,6 +396,12 @@ func moderateHandler(c echo.Context) error {
 	if livestreamModel.UserID != userID {
 		return echo.NewHTTPError(http.StatusBadRequest, "A streamer can't moderate livestreams that other streamers own")
 	}
+
+	tx, err := dbConn.BeginTxx(ctx, nil)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	}
+	defer tx.Rollback()
 
 	rs, err := tx.NamedExecContext(ctx, "INSERT INTO ng_words(user_id, livestream_id, word, created_at) VALUES (:user_id, :livestream_id, :word, :created_at)", &NGWord{
 		UserID:       int64(userID),
@@ -429,7 +429,7 @@ func moderateHandler(c echo.Context) error {
 	if err := tx.Commit(); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
 	}
-	// time.Sleep(500 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	ngWordsCache.Delete(int64(livestreamID))
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{
