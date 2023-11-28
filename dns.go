@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net"
 	"os"
@@ -9,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/go-json-experiment/json"
 
 	"github.com/miekg/dns"
 )
@@ -41,7 +42,7 @@ func loadDNSRecord() {
 	}
 	defer fp.Close()
 
-	json.NewDecoder(fp).Decode(&records)
+	json.UnmarshalRead(fp, &records)
 
 	for _, record := range records {
 		dnsRecordMap.Store(record, struct{}{})
@@ -69,7 +70,7 @@ func saveDNSRecord() {
 		return
 	}
 
-	if err := json.NewEncoder(fp).Encode(&records); err != nil {
+	if err := json.MarshalWrite(fp, &records); err != nil {
 		fp.Close()
 		log.Println(err)
 		return

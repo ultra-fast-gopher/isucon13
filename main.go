@@ -4,6 +4,7 @@ package main
 // sqlx的な参考: https://jmoiron.github.io/sqlx/
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -38,7 +39,7 @@ var (
 )
 
 func init() {
-	if false {
+	if true {
 		go standalone.Integrate(":19000")
 	}
 
@@ -125,12 +126,14 @@ func initializeHandler(c echo.Context) error {
 	userNameCache = Map[string, cachedUser]{}
 	livestreamTagsCache = Map[int64, []int64]{}
 	livestreamCache = Map[int64, LivestreamModel]{}
+	ngWordsCache = Map[int64, []*NGWord]{}
+	livecommentsCache = Map[int64, *LivecommentModel]{}
 	initDNSRecordMap()
 
 	os.RemoveAll(iconDir)
 	os.MkdirAll(iconDir, 0755)
 
-	// go http.Get("http://ufgportal:9000/api/group/collect")
+	go http.Get("http://ufgportal:9000/api/group/collect")
 
 	c.Request().Header.Add("Content-Type", "application/json;charset=utf-8")
 	return c.JSON(http.StatusOK, InitializeResponse{
@@ -267,3 +270,15 @@ func errorResponseHandler(err error, c echo.Context) {
 		c.Logger().Errorf("%+v", e)
 	}
 }
+
+type DB interface {
+	GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+	PreparexContext(ctx context.Context, query string) (*sqlx.Stmt, error)
+	QueryRowxContext(ctx context.Context, query string, args ...interface{}) *sqlx.Row
+	QueryxContext(ctx context.Context, query string, args ...interface{}) (*sqlx.Rows, error)
+	Rebind(query string) string
+	SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+}
+
+var _ DB = &sqlx.DB{}
+var _ DB = &sqlx.Tx{}

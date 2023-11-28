@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/go-json-experiment/json"
 
 	"github.com/samber/lo"
 
@@ -84,7 +85,7 @@ func reserveLivestreamHandler(c echo.Context) error {
 	userID := sess.Values[defaultUserIDKey].(int64)
 
 	var req *ReserveLivestreamRequest
-	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+	if err := json.UnmarshalRead(c.Request().Body, &req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to decode the request body as json")
 	}
 
@@ -176,11 +177,13 @@ func searchLivestreamsHandler(c echo.Context) error {
 	ctx := c.Request().Context()
 	keyTagName := c.QueryParam("tag")
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	}
-	defer tx.Rollback()
+	// tx, err := dbConn.BeginTxx(ctx, nil)
+	// if err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	// }
+	// defer tx.Rollback()
+	tx := dbConn
+	var err error
 
 	var livestreamModels []*LivestreamModel
 	if c.QueryParam("tag") != "" {
@@ -234,9 +237,9 @@ func searchLivestreamsHandler(c echo.Context) error {
 		livestreams[i] = livestream
 	}
 
-	if err := tx.Commit(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	}
+	// if err := tx.Commit(); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	// }
 
 	return c.JSON(http.StatusOK, livestreams)
 }
@@ -247,11 +250,12 @@ func getMyLivestreamsHandler(c echo.Context) error {
 		return err
 	}
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	}
-	defer tx.Rollback()
+	// tx, err := dbConn.BeginTxx(ctx, nil)
+	// if err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	// }
+	// defer tx.Rollback()
+	tx := dbConn
 
 	// error already checked
 	sess, _ := session.Get(defaultSessionIDKey, c)
@@ -271,9 +275,9 @@ func getMyLivestreamsHandler(c echo.Context) error {
 		livestreams[i] = livestream
 	}
 
-	if err := tx.Commit(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	}
+	// if err := tx.Commit(); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	// }
 
 	return c.JSON(http.StatusOK, livestreams)
 }
@@ -286,11 +290,12 @@ func getUserLivestreamsHandler(c echo.Context) error {
 
 	username := c.Param("username")
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	}
-	defer tx.Rollback()
+	// tx, err := dbConn.BeginTxx(ctx, nil)
+	// if err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	// }
+	// defer tx.Rollback()
+	tx := dbConn
 
 	var user UserModel
 	if err := tx.GetContext(ctx, &user, "SELECT * FROM users WHERE name = ?", username); err != nil {
@@ -314,9 +319,9 @@ func getUserLivestreamsHandler(c echo.Context) error {
 		livestreams[i] = livestream
 	}
 
-	if err := tx.Commit(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	}
+	// if err := tx.Commit(); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	// }
 
 	return c.JSON(http.StatusOK, livestreams)
 }
@@ -408,11 +413,12 @@ func getLivestreamHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "livestream_id in path must be integer")
 	}
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	}
-	defer tx.Rollback()
+	// tx, err := dbConn.BeginTxx(ctx, nil)
+	// if err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	// }
+	// defer tx.Rollback()
+	tx := dbConn
 
 	livestreamModel, err := getLivestream(ctx, tx, int64(livestreamID))
 	if err != nil {
@@ -428,9 +434,9 @@ func getLivestreamHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill livestream: "+err.Error())
 	}
 
-	if err := tx.Commit(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	}
+	// if err := tx.Commit(); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	// }
 
 	return c.JSON(http.StatusOK, livestream)
 }
@@ -452,6 +458,7 @@ func getLivecommentReportsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
 	}
 	defer tx.Rollback()
+	// tx := dbConn
 
 	var livestreamModel LivestreamModel
 	livestreamModel, err = getLivestream(ctx, tx, int64(livestreamID))
@@ -491,7 +498,7 @@ func getLivecommentReportsHandler(c echo.Context) error {
 
 var livestreamTagsCache Map[int64, []int64]
 
-func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel LivestreamModel) (Livestream, error) {
+func fillLivestreamResponse(ctx context.Context, tx DB, livestreamModel LivestreamModel) (Livestream, error) {
 	owner, err := getUserResponse(ctx, tx, livestreamModel.UserID)
 	if err != nil {
 		return Livestream{}, err
@@ -539,7 +546,7 @@ func fillLivestreamResponse(ctx context.Context, tx *sqlx.Tx, livestreamModel Li
 
 var livestreamCache Map[int64, LivestreamModel]
 
-func getLivestream(ctx context.Context, tx *sqlx.Tx, livestreamID int64) (LivestreamModel, error) {
+func getLivestream(ctx context.Context, tx DB, livestreamID int64) (LivestreamModel, error) {
 	// キャッシュがあればそれを使う
 	livestreamModel, found := livestreamCache.Load(livestreamID)
 	if found {

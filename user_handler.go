@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,11 +12,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-json-experiment/json"
+
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
-	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 )
@@ -140,7 +140,7 @@ func postIconHandler(c echo.Context) error {
 	userID := sess.Values[defaultUserIDKey].(int64)
 
 	var req *PostIconRequest
-	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+	if err := json.UnmarshalRead(c.Request().Body, &req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to decode the request body as json")
 	}
 
@@ -195,11 +195,12 @@ func getMeHandler(c echo.Context) error {
 	// existence already checked
 	userID := sess.Values[defaultUserIDKey].(int64)
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	}
-	defer tx.Rollback()
+	// tx, err := dbConn.BeginTxx(ctx, nil)
+	// if err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	// }
+	// defer tx.Rollback()
+	tx := dbConn
 
 	user, err := getUserResponse(ctx, tx, userID)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -209,9 +210,9 @@ func getMeHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill user: "+err.Error())
 	}
 
-	if err := tx.Commit(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	}
+	// if err := tx.Commit(); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	// }
 
 	return c.JSON(http.StatusOK, user)
 }
@@ -223,7 +224,7 @@ func registerHandler(c echo.Context) error {
 	defer c.Request().Body.Close()
 
 	req := PostUserRequest{}
-	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+	if err := json.UnmarshalRead(c.Request().Body, &req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to decode the request body as json")
 	}
 
@@ -318,15 +319,17 @@ func loginHandler(c echo.Context) error {
 	defer c.Request().Body.Close()
 
 	req := LoginRequest{}
-	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+	if err := json.UnmarshalRead(c.Request().Body, &req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to decode the request body as json")
 	}
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	}
-	defer tx.Rollback()
+	// tx, err := dbConn.BeginTxx(ctx, nil)
+	// if err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	// }
+	// defer tx.Rollback()
+	tx := dbConn
+	var err error
 
 	userModel := UserModel{}
 	// usernameはUNIQUEなので、whereで一意に特定できる
@@ -338,9 +341,9 @@ func loginHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get user: "+err.Error())
 	}
 
-	if err := tx.Commit(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	}
+	// if err := tx.Commit(); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	// }
 
 	// BcryptをAPIに投げる
 	api := fmt.Sprintf("%s/compair", bcryptAPI)
@@ -405,11 +408,12 @@ func getUserHandler(c echo.Context) error {
 
 	username := c.Param("username")
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	}
-	defer tx.Rollback()
+	// tx, err := dbConn.BeginTxx(ctx, nil)
+	// if err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	// }
+	// defer tx.Rollback()
+	tx := dbConn
 
 	userModel := UserModel{}
 	if err := tx.GetContext(ctx, &userModel, "SELECT id FROM users WHERE name = ?", username); err != nil {
@@ -424,9 +428,9 @@ func getUserHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to fill user: "+err.Error())
 	}
 
-	if err := tx.Commit(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	}
+	// if err := tx.Commit(); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	// }
 
 	return c.JSON(http.StatusOK, user)
 }
@@ -463,7 +467,7 @@ type cachedUser struct {
 var userCache Map[int64, cachedUser]
 var userNameCache Map[string, cachedUser]
 
-func getUserResponse(ctx context.Context, tx *sqlx.Tx, id int64) (User, error) {
+func getUserResponse(ctx context.Context, tx DB, id int64) (User, error) {
 	fetched, found := userCache.Load(id)
 
 	now := time.Now()
@@ -523,7 +527,7 @@ func getUserNameResponse(ctx context.Context, name string) (User, error) {
 	return user, nil
 }
 
-func fillUserResponse(ctx context.Context, tx *sqlx.Tx, userModel UserModel) (User, error) {
+func fillUserResponse(ctx context.Context, tx DB, userModel UserModel) (User, error) {
 	themeModel := ThemeModel{}
 	if tx != nil {
 		if err := tx.GetContext(ctx, &themeModel, "SELECT * FROM themes WHERE user_id = ?", userModel.ID); err != nil {

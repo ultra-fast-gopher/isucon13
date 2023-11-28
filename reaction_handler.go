@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/jmoiron/sqlx"
+	"github.com/go-json-experiment/json"
+
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 )
@@ -46,11 +46,12 @@ func getReactionsHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "livestream_id in path must be integer")
 	}
 
-	tx, err := dbConn.BeginTxx(ctx, nil)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
-	}
-	defer tx.Rollback()
+	// tx, err := dbConn.BeginTxx(ctx, nil)
+	// if err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to begin transaction: "+err.Error())
+	// }
+	// defer tx.Rollback()
+	tx := dbConn
 
 	query := "SELECT * FROM reactions WHERE livestream_id = ? ORDER BY created_at DESC"
 	if c.QueryParam("limit") != "" {
@@ -81,9 +82,9 @@ func getReactionsHandler(c echo.Context) error {
 		reactions[i] = reaction
 	}
 
-	if err := tx.Commit(); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
-	}
+	// if err := tx.Commit(); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, "failed to commit: "+err.Error())
+	// }
 
 	return c.JSON(http.StatusOK, reactions)
 }
@@ -106,7 +107,7 @@ func postReactionHandler(c echo.Context) error {
 	userID := sess.Values[defaultUserIDKey].(int64)
 
 	var req *PostReactionRequest
-	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+	if err := json.UnmarshalRead(c.Request().Body, &req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to decode the request body as json")
 	}
 
@@ -146,7 +147,7 @@ func postReactionHandler(c echo.Context) error {
 	return c.JSON(http.StatusCreated, reaction)
 }
 
-func fillReactionResponse(ctx context.Context, tx *sqlx.Tx, reactionModel ReactionModel, cachedLivestreamModel *LivestreamModel) (Reaction, error) {
+func fillReactionResponse(ctx context.Context, tx DB, reactionModel ReactionModel, cachedLivestreamModel *LivestreamModel) (Reaction, error) {
 	user, err := getUserResponse(ctx, tx, reactionModel.UserID)
 	if err != nil {
 		return Reaction{}, err
